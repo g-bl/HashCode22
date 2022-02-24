@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="outputs\Solver.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="inputs\a_an_example.in.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

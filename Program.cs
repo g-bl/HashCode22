@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace HCode22
 {
@@ -8,11 +9,16 @@ namespace HCode22
         {
             Console.WriteLine("=========== HCode22 BEGIN ===========");
 
-            _ = new Solver("inputs/a_an_example.in.txt",  "a.out", ' ');
-            _ = new Solver("inputs/b_basic.in.txt",       "b.out", ' ');
-            _ = new Solver("inputs/c_coarse.in.txt",      "c.out", ' ');
-            _ = new Solver("inputs/d_difficult.in.txt",   "d.out", ' ');
-            _ = new Solver("inputs/e_elaborate.in.txt",   "e.out", ' ');
+            Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "../../../outputs"));
+
+            _ = new Solver("../../../inputs/a_an_example.in.txt",  "../../../outputs/a.out", ' ');
+            _ = new Solver("../../../inputs/b_basic.in.txt",       "../../../outputs/b.out", ' ');
+            _ = new Solver("../../../inputs/c_coarse.in.txt",      "../../../outputs/c.out", ' ');
+            _ = new Solver("../../../inputs/d_difficult.in.txt",   "../../../outputs/d.out", ' ');
+            _ = new Solver("../../../inputs/e_elaborate.in.txt",   "../../../outputs/e.out", ' ');
+
+            File.Copy(Path.Combine(Directory.GetCurrentDirectory(), "../../../Solver.cs"),
+                      Path.Combine(Directory.GetCurrentDirectory(), "../../../outputs/Solver.cs"), true);
 
             Console.WriteLine("=========== HCode22 END =============");
         }
