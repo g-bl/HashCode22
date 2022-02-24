@@ -252,14 +252,17 @@ namespace HCode22
             {
                 foreach (var user in candidats)
                 {
-                    int userLevel;
-                    if (!user.Busy && user.Skills.TryGetValue(skill.Item1, out userLevel))
+                    if (!user.Busy)
                     {
+                        int level = 0;
+                        int userLevel = user.Skills.TryGetValue(skill.Item1, out level) ? level : 0;
+
                         if (userLevel >= skill.Item2) 
                         {
                             addedCandidats.Add(user);
                             user.Busy = true;
                             user.ToBeImprovedSkill = user.Skills[skill.Item1] == skill.Item2 ? skill.Item1 : -1;
+                            break;
                             // TODO Mentoring !!
                         }
                     }
