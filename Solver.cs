@@ -30,6 +30,8 @@ namespace HCode22
         public bool InProgress;
         public bool Completed;
         public int StartDay;
+
+        public float TrueScore;
     }
 
     class Solver
@@ -146,9 +148,6 @@ namespace HCode22
             List<Tuple<Project, List<Contributor>>> planning = new();
 
             // Sort by Score and Duration
-            int maxScore = projects.Max(p => p.Score);
-            int maxDuration = projects.Max(p => p.NbOfDaysToComplete);
-            projects = projects.OrderBy(p => p.Score / maxScore + (1 - p.NbOfDaysToComplete / maxDuration)).ToList();
 
             // Planning
             int day = 0;
@@ -184,10 +183,25 @@ namespace HCode22
                     }
                 }
 
+                // Sort
+
+                int maxScore = projects.Max(p => p.Score);
+                int maxDuration = projects.Max(p => p.NbOfDaysToComplete);
+
+                //projects = projects.OrderBy(p => p.Score / maxScore + (1 - p.NbOfDaysToComplete / maxDuration)).ToList();
+                foreach (var p in projects)
+                {
+                    int penalite = Math.Max(0, day + p.NbOfDaysToComplete - p.BestBeforeDay);
+                    p.TrueScore = p.Score - penalite;
+                }
+                projects = projects.OrderByDescending(p => p.TrueScore).ToList();
+
                 // Essayer de rajouter tous les projets restants
                 List <Tuple<Project, List<Contributor>>> toAdd = new();
                 foreach (Project project in projects)
                 {
+
+
                     // Affecter les intercos
                     if (!project.Planned)
                     {
