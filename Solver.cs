@@ -155,7 +155,7 @@ namespace HCode22
             bool terminate = false; // force quit, no more solutions
             do
             { 
-                //Console.WriteLine("new day: " + day);
+                Console.WriteLine("new day: " + day);
                 // New day
                 // Si projet est terminé le jour d'avant
 
@@ -213,7 +213,22 @@ namespace HCode22
                 }
 
 
-                day++;
+                if (toAdd.Count() == 0)
+                {
+                    var inProgressList = planning.Where(i => i.Item1.InProgress);
+                    if (inProgressList.Count() > 0)
+                    {
+                        day = planning.Where(i => i.Item1.InProgress).Min(p => (p.Item1.NbOfDaysToComplete + p.Item1.StartDay));
+                    }
+                    else {
+                        day++;
+                    }
+                    
+                }
+                else {
+                    day++;
+                }
+
 
                 // On sort si aucun projet n'est en cours
                 int nbInProgress = planning.Where(i => i.Item1.InProgress).Count();
