@@ -6,10 +6,21 @@ using System.Text;
 
 namespace HCode22
 {
-    public class Client
+    public class Contributor
     {
-        public List<int> Likes;     // positions inside ingredients List (considering int rather than string)
-        public List<int> Dislikes;
+        public int Id;
+        public string Name;
+        public List<Tuple<int, int>> Skills; // skillId, skillLvl
+    }
+
+    public class Project
+    {
+        public int Id;
+        public string Name;
+        public int NbOfDaysToComplete;
+        public int Score;
+        public int BestBeforeDay;
+        public List<Tuple<int, int>> RequiredSkills; // skillId, skillLvl
     }
 
     class Solver
@@ -18,8 +29,10 @@ namespace HCode22
         {
             // Model initializations
 
-            List<Client> clients = new();
-            List<string> ingredients = new();
+            List<Contributor> contributors = new();
+            List<Project> projects = new();
+            List<string> skillsName = new();
+            List<Tuple<Project, List<Contributor>>> planning = new();
 
             /***************************************************************************
              * Input loading
@@ -31,73 +44,97 @@ namespace HCode22
             string[] lines = File.ReadAllLines(inputFilePath);
 
             // Metadata parsing
-            int nbPotentialClients = int.Parse(lines[0]);
+            string[] infoLine = lines[0].Split(delimiter);
+            int nbContributors = int.Parse(infoLine[0]);
+            int nbProjects     = int.Parse(infoLine[1]);
+            int currentLine = 1;
+            int contributorsIdCounter = 0;
+            int projectsIdCounter = 0;
 
-            // Client likes and dislikes parsing
-            for (int i = 1; i <= nbPotentialClients * 2; i += 2)
+            // Contributors
+            for (int i = 0; i < nbContributors; i ++)
             {
-                string[] likesLine = lines[i].Split(delimiter);
-                string[] dislikesLine = lines[i+1].Split(delimiter);
+                string[] contributorInfo = lines[currentLine++].Split(delimiter);
 
-                int nbL = int.Parse(likesLine[0]);
-                int nbD = int.Parse(dislikesLine[0]);
+                string contributorName = contributorInfo[0];
+                int nbSkills = int.Parse(contributorInfo[1]);
+                List<Tuple<int, int>> contributorSkills = new();
 
-                Client newClient = new()
+                for (int j = 0; j < nbSkills; j++)
                 {
-                    Likes = new(),
-                    Dislikes = new()
-                };
+                    string[] skillInfo = lines[currentLine++].Split(delimiter);
 
-                // Likes
-                for (int l = 1; l <= nbL; l++)
-                {
-                    string ingredient = likesLine[l];
+                    string skillName = skillInfo[0];
+                    int skillLvl = int.Parse(skillInfo[1]);
 
-                    if (!ingredients.Contains(ingredient))
-                        ingredients.Add(ingredient);
+                    int skillId;
+                    if (skillsName.Contains(skillName))
+                        skillId = skillsName.IndexOf(skillName);
+                    else
+                    {
+                        skillsName.Add(skillName);
+                        skillId = skillsName.Count - 1;
+                    }
 
-                    newClient.Likes.Add(ingredients.IndexOf(ingredient));
+                    contributorSkills.Add(new(skillId, skillLvl));
                 }
 
-                // Dislikes
-                for (int d = 1; d <= nbD; d++)
+                contributors.Add(new Contributor()
                 {
-                    string ingredient = dislikesLine[d];
+                    Id = contributorsIdCounter++,
+                    Name = contributorName,
+                    Skills = contributorSkills
+                });
+            }
 
-                    if (!ingredients.Contains(ingredient))
-                        ingredients.Add(ingredient);
+            // Projects
 
-                    newClient.Dislikes.Add(ingredients.IndexOf(ingredient));
+            for (int i = 0; i < nbProjects; i++)
+            {
+                string[] projectInfo = lines[currentLine++].Split(delimiter);
+
+                string projectName = projectInfo[0];
+                int nbOfDaysToComplete = int.Parse(projectInfo[1]);
+                int score = int.Parse(projectInfo[2]);
+                int bestBeforeDay = int.Parse(projectInfo[3]);
+                int nbRequiredSkills = int.Parse(projectInfo[4]);
+                List<Tuple<int, int>> requiredSkills = new();
+
+                for (int j = 0; j < nbRequiredSkills; j++)
+                {
+                    string[] skillInfo = lines[currentLine++].Split(delimiter);
+
+                    string skillName = skillInfo[0];
+                    int skillLvl = int.Parse(skillInfo[1]);
+
+                    int skillId;
+                    if (skillsName.Contains(skillName))
+                        skillId = skillsName.IndexOf(skillName);
+                    else
+                    {
+                        skillsName.Add(skillName);
+                        skillId = skillsName.Count - 1;
+                    }
+
+                    requiredSkills.Add(new(skillId, skillLvl));
                 }
 
-                clients.Add(newClient);
+                projects.Add(new Project()
+                {
+                    Id = projectsIdCounter++,
+                    Name = projectName,
+                    NbOfDaysToComplete = nbOfDaysToComplete,
+                    Score = score,
+                    BestBeforeDay = bestBeforeDay,
+                    RequiredSkills = requiredSkills
+                });
             }
 
             /***************************************************************************
              * Solver
              * *************************************************************************/
 
-            List<int> pizzaIngredients = new(); // <-- Fill this with the solution
-
-            // Naive solver step #1 : adding all ingredients of value
-            foreach (Client c in clients)
-            {
-                foreach (int l in c.Likes)
-                {
-                    if (!pizzaIngredients.Contains(l))
-                        pizzaIngredients.Add(l);
-                }
-            }
-
-            // Naive solver step #2 : removing disliked ingredients
-            foreach (Client c in clients)
-            {
-                foreach (int d in c.Dislikes)
-                {
-                    if (pizzaIngredients.Contains(d))
-                        pizzaIngredients.Remove(d);
-                }
-            }
+            int pause = 1;
 
             /***************************************************************************
              * Output
@@ -107,9 +144,13 @@ namespace HCode22
 
             using (StreamWriter outputFile = new(Path.Combine(Directory.GetCurrentDirectory(), outputFileName)))
             {
-                string output = "" + pizzaIngredients.Count();
-                foreach (int i in pizzaIngredients)
-                    output += " " + ingredients[i];
+                string output = "" + planning.Count + "\n";
+
+                foreach (var step in planning)
+                {
+                    output += step.Item1.Name + "\n";
+                    output += string.Join(' ', step.Item2.Select(x => x.Name).ToList()) + "\n";
+                }
 
                 outputFile.WriteLine(output);
             }
