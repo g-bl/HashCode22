@@ -10,7 +10,10 @@ namespace HCode22
     {
         public int Id;
         public string Name;
-        public List<Tuple<int, int>> Skills; // skillId, skillLvl
+        public Dictionary<int, int> Skills; // skillId, skillLvl
+
+        public bool Busy;
+        public int ToBeImprovedSkill;
     }
 
     public class Project
@@ -21,6 +24,12 @@ namespace HCode22
         public int Score;
         public int BestBeforeDay;
         public List<Tuple<int, int>> RequiredSkills; // skillId, skillLvl
+
+        // Planning
+        public bool Planned;
+        public bool InProgress;
+        public bool Completed;
+        public int StartDay;
     }
 
     class Solver
@@ -32,7 +41,6 @@ namespace HCode22
             List<Contributor> contributors = new();
             List<Project> projects = new();
             List<string> skillsName = new();
-            List<Tuple<Project, List<Contributor>>> planning = new();
 
             /***************************************************************************
              * Input loading
@@ -58,7 +66,7 @@ namespace HCode22
 
                 string contributorName = contributorInfo[0];
                 int nbSkills = int.Parse(contributorInfo[1]);
-                List<Tuple<int, int>> contributorSkills = new();
+                Dictionary<int, int> contributorSkills = new();
 
                 for (int j = 0; j < nbSkills; j++)
                 {
@@ -76,7 +84,7 @@ namespace HCode22
                         skillId = skillsName.Count - 1;
                     }
 
-                    contributorSkills.Add(new(skillId, skillLvl));
+                    contributorSkills.Add(skillId, skillLvl);
                 }
 
                 contributors.Add(new Contributor()
@@ -134,7 +142,84 @@ namespace HCode22
              * Solver
              * *************************************************************************/
 
-            int pause = 1;
+            // Preparation
+            List<Tuple<Project, List<Contributor>>> planning = new();
+
+            // Sort..
+
+            // Planning
+            int day = 0;
+            bool terminate = false; // force quit, no more solutions
+            do
+            { 
+                //Console.WriteLine("new day: " + day);
+                // New day
+                // Si projet est terminé le jour d'avant
+
+                // On libère les projets
+                //Console.WriteLine("planned projects: " + planning.Count());
+
+                foreach (var item in planning)
+                {
+                    Project p = item.Item1;
+                    if (p.InProgress)
+                    {
+                        if ((p.NbOfDaysToComplete + p.StartDay) == day)
+                        {
+                            p.Completed = true;
+                            p.InProgress = false;
+                            // On level up
+                            // On libère les contributeurs
+
+                            foreach (var c in item.Item2)
+                            {
+                                c.Busy = false;
+                                if (c.ToBeImprovedSkill != -1)
+                                    c.Skills[c.ToBeImprovedSkill]++;
+                            }
+                        }
+                    }
+                }
+
+                // Essayer de rajouter tous les projets restants
+                List <Tuple<Project, List<Contributor>>> toAdd = new();
+                foreach (Project project in projects)
+                {
+                    // Affecter les intercos
+                    if (!project.Planned)
+                    {
+                        List<Contributor> candidatsSelectionnes = GetCandidatsFrom(project, contributors);
+                        if (candidatsSelectionnes != null)
+                        {
+                            //// Déclare busy
+                            //foreach (var item in candidatsSelectionnes) item.Busy = true;
+
+                            // Ajoute projet au planning
+                            toAdd.Add(new(project, candidatsSelectionnes));
+                            project.InProgress = true;
+                            project.Planned = true;
+                            project.StartDay = day;
+                        }
+                    }
+                    
+                }
+                foreach (var item in toAdd)
+                {
+                    planning.Add(item);
+                    projects.Remove(item.Item1);  
+                }
+
+                day++;
+
+                // On sort si aucun projet n'est en cours
+                int nbInProgress = planning.Where(i => i.Item1.InProgress).Count();
+                //Console.WriteLine("nbInProgress: " + nbInProgress);
+                terminate = (nbInProgress == 0);
+
+
+            } while (projects.Count > 0 && !terminate);
+
+            
 
             /***************************************************************************
              * Output
@@ -157,6 +242,31 @@ namespace HCode22
 
             Console.WriteLine("Done.");
             Console.WriteLine(Path.Combine(Directory.GetCurrentDirectory(), outputFileName));
+        }
+
+        private List<Contributor> GetCandidatsFrom(Project project, List<Contributor> candidats)
+        {
+            List<Contributor> addedCandidats = new();
+
+            foreach (var skill in project.RequiredSkills)
+            {
+                foreach (var user in candidats)
+                {
+                    int userLevel;
+                    if (!user.Busy && user.Skills.TryGetValue(skill.Item1, out userLevel))
+                    {
+                        if (userLevel >= skill.Item2) 
+                        {
+                            addedCandidats.Add(user);
+                            user.Busy = true;
+                            user.ToBeImprovedSkill = user.Skills[skill.Item1] == skill.Item2 ? skill.Item1 : -1;
+                            // TODO Mentoring !!
+                        }
+                    }
+                }
+            }
+
+            return addedCandidats.Count == project.RequiredSkills.Count ? addedCandidats : null;
         }
     }
 }
