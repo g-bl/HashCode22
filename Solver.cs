@@ -145,7 +145,10 @@ namespace HCode22
             // Preparation
             List<Tuple<Project, List<Contributor>>> planning = new();
 
-            // Sort..
+            // Sort by Score and Duration
+            int maxScore = projects.Max(p => p.Score);
+            int maxDuration = projects.Max(p => p.NbOfDaysToComplete);
+            projects = projects.OrderBy(p => p.Score / maxScore + (1 - p.NbOfDaysToComplete / maxDuration)).ToList();
 
             // Planning
             int day = 0;
@@ -209,6 +212,7 @@ namespace HCode22
                     projects.Remove(item.Item1);  
                 }
 
+
                 day++;
 
                 // On sort si aucun projet n'est en cours
@@ -244,12 +248,15 @@ namespace HCode22
             Console.WriteLine(Path.Combine(Directory.GetCurrentDirectory(), outputFileName));
         }
 
-        private List<Contributor> GetCandidatsFrom(Project project, List<Contributor> candidats)
+        private List<Contributor> GetCandidatsFrom(Project project, List<Contributor> inputCandidats)
         {
             List<Contributor> addedCandidats = new();
 
             foreach (var skill in project.RequiredSkills)
             {
+                // Tri par incompétence
+                List<Contributor> candidats = inputCandidats.Where(c => c.Skills.ContainsKey(skill.Item1)).OrderBy(c => c.Skills[skill.Item1]).ToList();
+
                 foreach (var user in candidats)
                 {
                     if (!user.Busy)
@@ -257,13 +264,36 @@ namespace HCode22
                         int level = 0;
                         int userLevel = user.Skills.TryGetValue(skill.Item1, out level) ? level : 0;
 
-                        if (userLevel >= skill.Item2) 
+                        // Mentoring
+                        bool mentored = false;
+                        if (userLevel == skill.Item2 - 1)
+                        {
+                            foreach (var mentor in addedCandidats)
+                            {
+                                int level2 = 0;
+                                int mentorLevel = mentor.Skills.TryGetValue(skill.Item1, out level2) ? level2 : 0;
+                                if (mentorLevel >= skill.Item2)
+                                {
+                                    mentored = true;
+                                }
+                            }
+                        }
+
+                        if (userLevel >= skill.Item2 || mentored) 
                         {
                             addedCandidats.Add(user);
                             user.Busy = true;
+
+                            // TODO Opti gérer les intercos dans une liste séparée
+
+                            // Skill ++
+                            // Si skill == 0 il faut le créer
+                            if (userLevel == 0) 
+                            {
+                                user.Skills.Add(skill.Item1, 0);
+                            }
                             user.ToBeImprovedSkill = user.Skills[skill.Item1] == skill.Item2 ? skill.Item1 : -1;
                             break;
-                            // TODO Mentoring !!
                         }
                     }
                 }
